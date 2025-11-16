@@ -1,7 +1,3 @@
---// ￰ﾟﾎﾨ Cheat a Steal - Executor vFINAL: BEST MODEL BILLBOARD MAXDIST 1000000 FIXED
--- BEST MODEL: % YOUR BEST → Producing $/s → HIGHEST VALUE
--- BILLBOARD: {100,100} + MaxDistance = 1000000 (1 MILLION)
--- UPDATES EVERY FRAME | FULL RESTORE | 1000% WORKING
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,17 +11,11 @@ local resultCountLabel
 local scrollResults
 local resultLayout
 
--- ESP State
 local espEnabled = false
 local originalTransparencies = {}
 local highlights = {}
-local bestModel = nil
-local bestBillboard = nil
-local bestValue = -1
-local bestIsBoost = false
-local currentBestBillboard = nil  -- Track current modified billboard
+local currentBestBillboard = nil
 
--- Get tycoon folder by owner
 local function getTycoonOf(playerName)
 	for _, tycoon in ipairs(tycoons:GetChildren()) do
 		if tycoon:GetAttribute("Owner") == playerName then
@@ -34,7 +24,6 @@ local function getTycoonOf(playerName)
 	end
 end
 
--- Find model in TrashAbsoluteData by name
 local function findRarityModel(modelName)
 	for _, rarityFolder in ipairs(trashData:GetChildren()) do
 		if rarityFolder:IsA("Folder") then
@@ -47,7 +36,6 @@ local function findRarityModel(modelName)
 	return nil
 end
 
--- PERFECT CAMERA: Y 180° + FARTHER + LOWER
 local function setupViewport(vf, modelClone)
 	vf.BackgroundTransparency = 1
 	vf.Size = UDim2.new(0, 60, 0, 60)
@@ -76,10 +64,7 @@ local function setupViewport(vf, modelClone)
 	end
 
 	local cam = Instance.new("Camera")
-	cam.CFrame = CFrame.new(
-		Vector3.new(-16, 2, 22),
-		Vector3.new(0, 1, 0)
-	)
+	cam.CFrame = CFrame.new(Vector3.new(-16, 2, 22), Vector3.new(0, 1, 0))
 	cam.FieldOfView = 20
 	vf.CurrentCamera = cam
 	cam.Parent = vf
@@ -91,14 +76,12 @@ local function setupViewport(vf, modelClone)
 	end)
 end
 
--- ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ExecutorUI"
 screenGui.IgnoreGuiInset = true
 screenGui.ResetOnSpawn = false
 screenGui.Parent = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer.PlayerGui
 
--- Utility: Clean Panel
 local function cleanPanel(parent, size, pos, bgColor, transparency)
 	local f = Instance.new("Frame")
 	f.Size = size
@@ -111,12 +94,10 @@ local function cleanPanel(parent, size, pos, bgColor, transparency)
 	return f
 end
 
--- MAIN FRAME
 local mainFrame = cleanPanel(screenGui, UDim2.new(0, 460, 0, 640), UDim2.new(0.5, -230, 0.2, 0), Color3.fromRGB(18, 18, 18), 0)
 mainFrame.Active = true
 mainFrame.Draggable = true
 
--- Title
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -40, 0, 50)
 titleLabel.Position = UDim2.new(0, 20, 0, 10)
@@ -128,14 +109,12 @@ titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = mainFrame
 
--- Tab Container
 local tabContainer = Instance.new("Frame")
 tabContainer.Size = UDim2.new(1, -40, 0, 45)
 tabContainer.Position = UDim2.new(0, 20, 0, 65)
 tabContainer.BackgroundTransparency = 1
 tabContainer.Parent = mainFrame
 
--- Home Tab
 local homeTab = Instance.new("TextButton")
 homeTab.Size = UDim2.new(0.5, -5, 1, 0)
 homeTab.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -146,7 +125,6 @@ homeTab.TextSize = 17
 homeTab.Parent = tabContainer
 Instance.new("UICorner", homeTab).CornerRadius = UDim.new(0, 12)
 
--- Others Tab
 local othersTab = Instance.new("TextButton")
 othersTab.Size = UDim2.new(0.5, -5, 1, 0)
 othersTab.Position = UDim2.new(0.5, 5, 0, 0)
@@ -158,7 +136,6 @@ othersTab.TextSize = 17
 othersTab.Parent = tabContainer
 Instance.new("UICorner", othersTab).CornerRadius = UDim.new(0, 12)
 
--- Content Frames
 local homeContent = Instance.new("Frame")
 homeContent.Size = UDim2.new(1, -40, 1, -165)
 homeContent.Position = UDim2.new(0, 20, 0, 120)
@@ -172,7 +149,6 @@ othersContent.BackgroundTransparency = 1
 othersContent.Visible = false
 othersContent.Parent = mainFrame
 
--- Tab Switching
 homeTab.MouseButton1Click:Connect(function()
 	homeContent.Visible = true
 	othersContent.Visible = false
@@ -191,7 +167,6 @@ othersTab.MouseButton1Click:Connect(function()
 	othersTab.TextColor3 = Color3.fromRGB(255, 255, 255)
 end)
 
--- OTHERS: Base ESP Toggle
 local espFrame = Instance.new("Frame")
 espFrame.Size = UDim2.new(1, 0, 0, 50)
 espFrame.Position = UDim2.new(0, 0, 0, 0)
@@ -221,7 +196,6 @@ toggleBtn.TextSize = 16
 toggleBtn.Parent = espFrame
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
 
--- Parse $/s value (48.1, 1.32K, 3B, 1T)
 local function parseProductionValue(text)
 	if not text then return 0 end
 	text = text:gsub("%s", ""):gsub(",", "")
@@ -239,7 +213,6 @@ local function parseProductionValue(text)
 	return num
 end
 
--- Reset previous best billboard
 local function resetCurrentBestBillboard()
 	if currentBestBillboard and currentBestBillboard.Parent then
 		currentBestBillboard.Size = UDim2.new(7, 14, 4, 8)
@@ -248,20 +221,16 @@ local function resetCurrentBestBillboard()
 	currentBestBillboard = nil
 end
 
--- Apply to new best billboard
 local function applyToBestBillboard(billboard)
 	if not billboard or not billboard.Parent then return end
 	billboard.Size = UDim2.new(0, 100, 0, 100)
-	billboard.MaxDistance = 1000000  -- 1 MILLION
+	billboard.MaxDistance = 1000000
 	currentBestBillboard = billboard
 end
 
--- Find best model across all tycoons
 local function findBestModel()
-	local newBestModel = nil
 	local newBestBillboard = nil
 	local newBestValue = -1
-	local newIsBoost = false
 
 	for _, tycoon in ipairs(tycoons:GetChildren()) do
 		local temp = tycoon:FindFirstChild("Temporary")
@@ -272,7 +241,6 @@ local function findBestModel()
 			local trashInfo = model:FindFirstChild("TrashInfo")
 			if not trashInfo or not trashInfo:IsA("BillboardGui") then continue end
 
-			-- Check ProducingBoost first (visible only)
 			local boostLabel = trashInfo:FindFirstChild("ProducingBoost")
 			if boostLabel and boostLabel:IsA("TextLabel") and boostLabel.Visible then
 				local txt = boostLabel.Text
@@ -281,28 +249,22 @@ local function findBestModel()
 					local val = tonumber(percent)
 					if val and val > newBestValue then
 						newBestValue = val
-						newBestModel = model
 						newBestBillboard = trashInfo
-						newIsBoost = true
 					end
 				end
 			end
 
-			-- Fallback to Producing (regular models)
 			local producingLabel = trashInfo:FindFirstChild("Producing")
 			if producingLabel and producingLabel:IsA("TextLabel") and producingLabel.Visible then
 				local val = parseProductionValue(producingLabel.Text)
 				if val > newBestValue then
 					newBestValue = val
-					newBestModel = model
 					newBestBillboard = trashInfo
-					newIsBoost = false
 				end
 			end
 		end
 	end
 
-	-- Only update if changed
 	if newBestBillboard ~= currentBestBillboard then
 		resetCurrentBestBillboard()
 		if newBestBillboard then
@@ -311,7 +273,6 @@ local function findBestModel()
 	end
 end
 
--- ESP Functions
 local function applyESP()
 	if espEnabled then return end
 	espEnabled = true
@@ -319,7 +280,6 @@ local function applyESP()
 	toggleBtn.Text = "ON"
 	toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-	-- Reset old
 	for part, _ in pairs(originalTransparencies) do
 		if part and part.Parent then
 			part.Transparency = 1
@@ -332,12 +292,10 @@ local function applyESP()
 	highlights = {}
 	resetCurrentBestBillboard()
 
-	-- Process tycoons
 	for _, tycoon in ipairs(tycoons:GetChildren()) do
 		local tycoonModel = tycoon:FindFirstChild("Tycoon")
 		if not tycoonModel then continue end
 
-		-- Fade: Const, Walls, Builded
 		for _, folderName in ipairs({"Const", "Walls", "Builded"}) do
 			local folder = tycoonModel:FindFirstChild(folderName)
 			if folder then
@@ -352,7 +310,6 @@ local function applyESP()
 			end
 		end
 
-		-- Invisible: Slots2 / Slots3
 		local builded = tycoonModel:FindFirstChild("Builded")
 		if builded then
 			for _, floorName in ipairs({"Floor1", "Floor2"}) do
@@ -377,7 +334,6 @@ local function applyESP()
 			end
 		end
 
-		-- Highlights for Temporary models
 		local temp = tycoon:FindFirstChild("Temporary")
 		if temp then
 			for _, model in ipairs(temp:GetChildren()) do
@@ -397,7 +353,6 @@ local function applyESP()
 		end
 	end
 
-	-- Initial best model scan
 	findBestModel()
 end
 
@@ -408,7 +363,6 @@ local function removeESP()
 	toggleBtn.Text = "OFF"
 	toggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
 
-	-- Restore transparencies
 	for part, trans in pairs(originalTransparencies) do
 		if part and part.Parent then
 			part.Transparency = trans
@@ -416,13 +370,11 @@ local function removeESP()
 	end
 	originalTransparencies = {}
 
-	-- Destroy highlights
 	for _, hl in pairs(highlights) do
 		if hl and hl.Parent then hl:Destroy() end
 	end
 	highlights = {}
 
-	-- Reset best billboard
 	resetCurrentBestBillboard()
 end
 
@@ -434,16 +386,12 @@ toggleBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
--- DYNAMIC BEST MODEL UPDATE EVERY FRAME
 RunService.Heartbeat:Connect(function()
-	if not espEnabled then return end
-	task.spawn(findBestModel)
+	if espEnabled then
+		task.spawn(findBestModel)
+	end
 end)
 
--- [HOME TAB: Player List, Search, Viewport - SAME AS BEFORE]
--- [Full player button, search, etc. code - unchanged, pasted below for completeness]
-
--- HOME: Player Scroll
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, 0, 0, 410)
 scroll.Position = UDim2.new(0, 0, 0, 0)
@@ -740,7 +688,6 @@ Players.PlayerAdded:Connect(function(plr)
 end)
 Players.PlayerRemoving:Connect(refreshPlayers)
 
--- HOME: Search Box
 local searchBox = Instance.new("TextBox")
 searchBox.Size = UDim2.new(1, 0, 0, 45)
 searchBox.Position = UDim2.new(0, 0, 1, -55)
@@ -754,7 +701,6 @@ searchBox.TextXAlignment = Enum.TextXAlignment.Left
 searchBox.Parent = homeContent
 Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 12)
 
--- GLOBAL SEARCH UI
 local function createGlobalSearchUI()
 	if globalSearchFrame then globalSearchFrame:Destroy() end
 
@@ -818,73 +764,64 @@ local function createGlobalSearchUI()
 	end)
 end
 
--- GLOBAL SEARCH LOGIC
 local function updateGlobalSearch()
-	local ok = pcall(function()
-		local text = searchBox.Text:lower()
-		if text == "" or #text < 1 then
-			if globalSearchFrame then globalSearchFrame:Destroy() end
-			globalSearchFrame = nil
-			return
+	local text = searchBox.Text:lower()
+	if text == "" or #text < 1 then
+		if globalSearchFrame then globalSearchFrame:Destroy() end
+		globalSearchFrame = nil
+		return
+	end
+
+	if not globalSearchFrame then
+		createGlobalSearchUI()
+	end
+
+	for _, child in ipairs(scrollResults:GetChildren()) do
+		if child:IsA("GuiObject") then
+			child:Destroy()
 		end
+	end
 
-		if not globalSearchFrame then
-			createGlobalSearchUI()
-		end
+	resultLayout.Parent = nil
+	task.wait()
+	resultLayout.Parent = scrollResults
 
-		for _, child in ipairs(scrollResults:GetChildren()) do
-			if child:IsA("GuiObject") then
-				child:Destroy()
-			end
-		end
+	local results = 0
+	for _, tycoon in ipairs(tycoons:GetChildren()) do
+		local ownerName = tycoon:GetAttribute("Owner")
+		if not ownerName or ownerName == LocalPlayer.Name then continue end
+		local plr = Players:FindFirstChild(ownerName)
+		local displayName = plr and plr.DisplayName or ownerName
+		local tempFolder = tycoon:FindFirstChild("Temporary")
+		if not tempFolder then continue end
 
-		resultLayout.Parent = nil
-		task.wait()
-		resultLayout.Parent = scrollResults
+		for _, model in ipairs(tempFolder:GetChildren()) do
+			if not model:IsA("Model") then continue end
 
-		local results = 0
-		for _, tycoon in ipairs(tycoons:GetChildren()) do
-			local ownerName = tycoon:GetAttribute("Owner")
-			if not ownerName or ownerName == LocalPlayer.Name then continue end
-			local plr = Players:FindFirstChild(ownerName)
-			local displayName = plr and plr.DisplayName or ownerName
-			local tempFolder = tycoon:FindFirstChild("Temporary")
-			if not tempFolder then continue end
-
-			for _, model in ipairs(tempFolder:GetChildren()) do
-				if not model:IsA("Model") then continue end
-
-				local searchText = model.Name:lower()
-				local trashInfo = model:FindFirstChild("TrashInfo")
-				if trashInfo then
-					for _, obj in ipairs(trashInfo:GetChildren()) do
-						if obj:IsA("TextLabel") and obj.Visible then
-							searchText = searchText .. " " .. obj.Text:lower()
-						end
+			local searchText = model.Name:lower()
+			local trashInfo = model:FindFirstChild("TrashInfo")
+			if trashInfo then
+				for _, obj in ipairs(trashInfo:GetChildren()) do
+					if obj:IsA("TextLabel") and obj.Visible then
+						searchText = searchText .. " " .. obj.Text:lower()
 					end
 				end
+			end
 
-				if searchText:find(text) then
-					results = results + 1
-					createModelButton(scrollResults, model, ownerName, displayName)
-				end
+			if searchText:find(text) then
+				results = results + 1
+				createModelButton(scrollResults, model, ownerName, displayName)
 			end
 		end
+	end
 
-		if results == 0 then
-			resultCountLabel.Text = "No Results Found"
-			resultCountLabel.TextColor3 = Color3.fromRGB(255, 150, 150)
-		else
-			resultCountLabel.Text = results .. " Result" .. (results > 1 and "s" or "") .. " Found"
-			resultCountLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-		end
-	end)
-
-	if not ok then
-		warn("Search error - check output")
+	if results == 0 then
+		resultCountLabel.Text = "No Results Found"
+		resultCountLabel.TextColor3 = Color3.fromRGB(255, 150, 150)
+	else
+		resultCountLabel.Text = results .. " Result" .. (results > 1 and "s" or "") .. " Found"
+		resultCountLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
 	end
 end
 
 searchBox:GetPropertyChangedSignal("Text"):Connect(updateGlobalSearch)
-
-print("Arrest a Brainrot Executor LOADED - BEST MODEL BILLBOARD MAXDIST 1000000 FIXED!")
