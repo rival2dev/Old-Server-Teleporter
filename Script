@@ -23,6 +23,7 @@ local timerTextLabel = nil
 local favoritePlayer = nil
 local favoriteTimerDisplayFrame = nil
 local favoriteTimerTextLabel = nil
+local favoritePlayerLabel = nil 
 
 local function getTycoonOf(playerName)
 	for _, tycoon in ipairs(tycoons:GetChildren()) do
@@ -752,36 +753,117 @@ local function makePlayerButton(plr)
 	btn.Text = ""
 	btn.Parent = container
 	local starBtn = Instance.new("TextButton")
-	starBtn.Size = UDim2.new(0,30,0,30)
-	starBtn.Position = UDim2.new(1,-40,0.5,-15)
+	starBtn.Name = "StarButton"
+	starBtn.Size = UDim2.new(0, 42, 0, 42)
+	starBtn.Position = UDim2.new(1, -58, 0.5, -21)  -- Perfectly aligned next to status
 	starBtn.BackgroundTransparency = 1
-	starBtn.Text = "￢ﾘﾆ"
-	starBtn.TextColor3 = Color3.fromRGB(255,255,255)
-	starBtn.Font = Enum.Font.FredokaOne
-	starBtn.TextSize = 20
-	starBtn.TextScaled = true
+	starBtn.Text = "☆"
+	starBtn.TextColor3 = Color3.fromRGB(255, 255, 255)  -- Pure white
+	starBtn.Font = Enum.Font.GothamBold
+	starBtn.TextSize = 40
+	starBtn.TextScaled = false
 	starBtn.Parent = container
+
+	-- Thick black stroke for depth
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 3.2
+	stroke.Color = Color3.fromRGB(27, 27, 27)
+	stroke.Parent = starBtn
+
+	-- Hover effect (only if not favorited)
 	starBtn.MouseEnter:Connect(function()
 		if favoritePlayer ~= playerName then
-			starBtn.Text = "￢ﾘﾅ"
+			starBtn.Text = "★"
+			starBtn.TextColor3 = Color3.fromRGB(255, 230, 0)  -- Gold on hover
 		end
 	end)
+
 	starBtn.MouseLeave:Connect(function()
 		if favoritePlayer ~= playerName then
-			starBtn.Text = "￢ﾘﾆ"
+			starBtn.Text = "☆"
+			starBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		else
+			starBtn.TextColor3 = Color3.fromRGB(255, 230, 0)  -- Gold when favorited
 		end
 	end)
+
+	-- Click to toggle favorite
 	starBtn.MouseButton1Click:Connect(function()
 		if favoritePlayer == playerName then
+			-- Unfavorite
 			favoritePlayer = nil
-			starBtn.Text = "￢ﾘﾆ"
+			starBtn.Text = "☆"
+			starBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+			-- Remove label from More frame
+			local moreFrame = LocalPlayer.PlayerGui:FindFirstChild("SideButtons")
+			.TopCanvas.Datas.Coins.More
+			if moreFrame and moreFrame:FindFirstChild("FavoritePlayerLabel") then
+				moreFrame.FavoritePlayerLabel:Destroy()
+			end
+
 			removeFavoriteTimerDisplay()
+
 		else
+			-- Unfavorite old player first
+			if favoritePlayer then
+				for _, data in pairs(playerButtons) do
+					if data.container then
+						local oldStar = data.container:FindFirstChild("StarButton")
+						if oldStar then
+							oldStar.Text = "☆"
+							oldStar.TextColor3 = Color3.fromRGB(255, 255, 255)
+						end
+					end
+				end
+
+				-- Remove old label
+				local moreFrame = LocalPlayer.PlayerGui:FindFirstChild("SideButtons")
+				.TopCanvas.Datas.Coins.More
+				if moreFrame and moreFrame:FindFirstChild("FavoritePlayerLabel") then
+					moreFrame.FavoritePlayerLabel:Destroy()
+				end
+				removeFavoriteTimerDisplay()
+			end
+
+			-- Favorite new player
 			favoritePlayer = playerName
-			starBtn.Text = "￢ﾘﾅ"
+			starBtn.Text = "★"
+			starBtn.TextColor3 = Color3.fromRGB(255, 230, 0)  -- Gold when favorited
+
+			-- Create "★ Favorite Player ★" inside More frame
+			local moreFrame = LocalPlayer.PlayerGui:FindFirstChild("SideButtons")
+			.TopCanvas.Datas.Coins.More
+			if moreFrame then
+				local favLabel = Instance.new("TextLabel")
+				favLabel.Name = "FavoritePlayerLabel"
+				favLabel.Size = UDim2.new(0, 551, 0, 29)
+				favLabel.Position = UDim2.new(0.5, -275.5, 0, 5)  -- Top of More frame
+				favLabel.BackgroundTransparency = 1
+				favLabel.Text = "★ Favorite Player ★"
+				favLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+				favLabel.Font = Enum.Font.FredokaOne
+				favLabel.TextScaled = true
+				favLabel.TextXAlignment = Enum.TextXAlignment.Center
+				favLabel.ZIndex = 10
+				favLabel.Parent = moreFrame
+
+				local labelStroke = Instance.new("UIStroke")
+				labelStroke.Thickness = 2.5
+				labelStroke.Color = Color3.fromRGB(27, 27, 27)
+				labelStroke.Parent = favLabel
+			end
+
 			createFavoriteTimerDisplay(playerName)
 		end
 	end)
+
+	-- Update star color when favorited elsewhere
+	if favoritePlayer == playerName then
+		starBtn.Text = "★"
+		starBtn.TextColor3 = Color3.fromRGB(255, 230, 0)
+	end
+
 	local conn
 	local function updateStatus()
 		local tycoon = getTycoonOf(playerName)
@@ -819,9 +901,17 @@ local function makePlayerButton(plr)
 			statusLabel.TextColor3 = Color3.fromRGB(255,220,0)
 			statusLabel.BackgroundColor3 = Color3.fromRGB(80,70,0)
 			if conn then conn:Disconnect() end
+
 			if favoritePlayer == playerName then
 				favoritePlayer = nil
 				removeFavoriteTimerDisplay()
+
+				-- Remove label from More frame
+				local moreFrame = LocalPlayer.PlayerGui:FindFirstChild("SideButtons")
+				.TopCanvas.Datas.Coins.More
+				if moreFrame and moreFrame:FindFirstChild("FavoritePlayerLabel") then
+					moreFrame.FavoritePlayerLabel:Destroy()
+				end
 			end
 		end
 	end)
