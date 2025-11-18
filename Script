@@ -10,135 +10,135 @@ local globalSearchFrame
 local resultCountLabel
 local scrollResults
 local resultLayout
-
 local espEnabled = false
 local originalTransparencies = {}
 local highlights = {}
-local currentBestBillboard = nil
+local showMoneyBest = true
+local showPercentBest = true
+local currentMoneyBillboard = nil
+local currentPercentBillboard = nil
+local timerDisplayEnabled = false
+local timerDisplayFrame = nil
+local timerTextLabel = nil
+local favoritePlayer = nil
+local favoriteTimerDisplayFrame = nil
+local favoriteTimerTextLabel = nil
 
 local function getTycoonOf(playerName)
-	for _, tycoon in ipairs(tycoons:GetChildren()) do
-		if tycoon:GetAttribute("Owner") == playerName then
-			return tycoon
-		end
-	end
+    for _, tycoon in ipairs(tycoons:GetChildren()) do
+        if tycoon:GetAttribute("Owner") == playerName then
+            return tycoon
+        end
+    end
 end
 
 local function findRarityModel(modelName)
-	for _, rarityFolder in ipairs(trashData:GetChildren()) do
-		if rarityFolder:IsA("Folder") then
-			local model = rarityFolder:FindFirstChild(modelName)
-			if model and model:IsA("Model") then
-				return model
-			end
-		end
-	end
-	return nil
+    for _, rarityFolder in ipairs(trashData:GetChildren()) do
+        if rarityFolder:IsA("Folder") then
+            local model = rarityFolder:FindFirstChild(modelName)
+            if model and model:IsA("Model") then
+                return model
+            end
+        end
+    end
+    return nil
 end
 
 local function setupViewport(vf, modelClone)
-	vf.BackgroundTransparency = 1
-	vf.Size = UDim2.new(0, 60, 0, 60)
-
-	local world = Instance.new("WorldModel")
-	world.Parent = vf
-
-	local clone = modelClone:Clone()
-	clone.Parent = world
-
-	local y180 = CFrame.Angles(0, math.rad(180), 0)
-	clone:PivotTo(CFrame.new(0, 0, 0) * y180)
-
-	local biggestPart = nil
-	local biggestSize = 0
-	for _, part in ipairs(clone:GetDescendants()) do
-		if part:IsA("BasePart") and part.Size.Magnitude > biggestSize then
-			biggestSize = part.Size.Magnitude
-			biggestPart = part
-		end
-	end
-	
-	if biggestPart then
-		clone.PrimaryPart = biggestPart
-		clone:SetPrimaryPartCFrame(CFrame.new(0, 0, 0) * y180)
-	end
-
-	local cam = Instance.new("Camera")
-	cam.CFrame = CFrame.new(Vector3.new(-16, 2, 22), Vector3.new(0, 1, 0))
-	cam.FieldOfView = 20
-	vf.CurrentCamera = cam
-	cam.Parent = vf
-
-	task.delay(0.1, function()
-		if clone.PrimaryPart then
-			clone:SetPrimaryPartCFrame(CFrame.new(0, 0, 0) * y180)
-		end
-	end)
+    vf.BackgroundTransparency = 1
+    vf.Size = UDim2.new(0, 60, 0, 60)
+    local world = Instance.new("WorldModel", vf)
+    local clone = modelClone:Clone()
+    clone.Parent = world
+    local y180 = CFrame.Angles(0, math.rad(180), 0)
+    clone:PivotTo(CFrame.new(0,0,0) * y180)
+    local biggestPart
+    local biggestSize = 0
+    for _, part in ipairs(clone:GetDescendants()) do
+        if part:IsA("BasePart") and part.Size.Magnitude > biggestSize then
+            biggestSize = part.Size.Magnitude
+            biggestPart = part
+        end
+    end
+    if biggestPart then
+        clone.PrimaryPart = biggestPart
+        clone:SetPrimaryPartCFrame(CFrame.new(0,0,0) * y180)
+    end
+    local cam = Instance.new("Camera")
+    cam.CFrame = CFrame.new(Vector3.new(-16,2,22), Vector3.new(0,1,0))
+    cam.FieldOfView = 20
+    vf.CurrentCamera = cam
+    cam.Parent = vf
+    task.delay(0.1, function()
+        if clone.PrimaryPart then
+            clone:SetPrimaryPartCFrame(CFrame.new(0,0,0) * y180)
+        end
+    end)
 end
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ExecutorUI"
 screenGui.IgnoreGuiInset = true
 screenGui.ResetOnSpawn = false
-screenGui.Parent = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer.PlayerGui
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local function cleanPanel(parent, size, pos, bgColor, transparency)
-	local f = Instance.new("Frame")
-	f.Size = size
-	f.Position = pos
-	f.BackgroundColor3 = bgColor or Color3.fromRGB(20, 20, 20)
-	f.BackgroundTransparency = transparency or 0
-	f.BorderSizePixel = 0
-	f.Parent = parent
-	Instance.new("UICorner", f).CornerRadius = UDim.new(0, 16)
-	return f
+local function cleanPanel(parent, size, pos, bgColor, trans)
+    local f = Instance.new("Frame")
+    f.Size = size
+    f.Position = pos
+    f.BackgroundColor3 = bgColor or Color3.fromRGB(20,20,20)
+    f.BackgroundTransparency = trans or 0
+    f.BorderSizePixel = 0
+    f.Parent = parent
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0,16)
+    return f
 end
 
-local mainFrame = cleanPanel(screenGui, UDim2.new(0, 460, 0, 640), UDim2.new(0.5, -230, 0.2, 0), Color3.fromRGB(18, 18, 18), 0)
+local mainFrame = cleanPanel(screenGui, UDim2.new(0,460,0,640), UDim2.new(0.5,-230,0.2,0), Color3.fromRGB(18,18,18), 0)
 mainFrame.Active = true
 mainFrame.Draggable = true
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -40, 0, 50)
-titleLabel.Position = UDim2.new(0, 20, 0, 10)
+titleLabel.Size = UDim2.new(1,-40,0,50)
+titleLabel.Position = UDim2.new(0,20,0,10)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Text = "Arrest a Brainrot"
 titleLabel.TextSize = 20
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextColor3 = Color3.fromRGB(255,255,255)
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = mainFrame
 
 local tabContainer = Instance.new("Frame")
-tabContainer.Size = UDim2.new(1, -40, 0, 45)
-tabContainer.Position = UDim2.new(0, 20, 0, 65)
+tabContainer.Size = UDim2.new(1,-40,0,45)
+tabContainer.Position = UDim2.new(0,20,0,65)
 tabContainer.BackgroundTransparency = 1
 tabContainer.Parent = mainFrame
 
 local homeTab = Instance.new("TextButton")
-homeTab.Size = UDim2.new(0.5, -5, 1, 0)
-homeTab.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+homeTab.Size = UDim2.new(0.5,-5,1,0)
+homeTab.BackgroundColor3 = Color3.fromRGB(30,30,30)
 homeTab.Text = "Home"
-homeTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+homeTab.TextColor3 = Color3.fromRGB(255,255,255)
 homeTab.Font = Enum.Font.GothamBold
 homeTab.TextSize = 17
 homeTab.Parent = tabContainer
-Instance.new("UICorner", homeTab).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", homeTab).CornerRadius = UDim.new(0,12)
 
 local othersTab = Instance.new("TextButton")
-othersTab.Size = UDim2.new(0.5, -5, 1, 0)
-othersTab.Position = UDim2.new(0.5, 5, 0, 0)
-othersTab.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+othersTab.Size = UDim2.new(0.5,-5,1,0)
+othersTab.Position = UDim2.new(0.5,5,0,0)
+othersTab.BackgroundColor3 = Color3.fromRGB(25,25,25)
 othersTab.Text = "Others"
-othersTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+othersTab.TextColor3 = Color3.fromRGB(180,180,180)
 othersTab.Font = Enum.Font.GothamBold
 othersTab.TextSize = 17
 othersTab.Parent = tabContainer
-Instance.new("UICorner", othersTab).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", othersTab).CornerRadius = UDim.new(0,12)
 
 local homeContent = Instance.new("Frame")
-homeContent.Size = UDim2.new(1, -40, 1, -165)
-homeContent.Position = UDim2.new(0, 20, 0, 120)
+homeContent.Size = UDim2.new(1,-40,1,-165)
+homeContent.Position = UDim2.new(0,20,0,120)
 homeContent.BackgroundTransparency = 1
 homeContent.Parent = mainFrame
 
@@ -150,678 +150,859 @@ othersContent.Visible = false
 othersContent.Parent = mainFrame
 
 homeTab.MouseButton1Click:Connect(function()
-	homeContent.Visible = true
-	othersContent.Visible = false
-	homeTab.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	othersTab.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-	homeTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-	othersTab.TextColor3 = Color3.fromRGB(180, 180, 180)
+    homeContent.Visible = true
+    othersContent.Visible = false
+    homeTab.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    othersTab.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    homeTab.TextColor3 = Color3.fromRGB(255,255,255)
+    othersTab.TextColor3 = Color3.fromRGB(180,180,180)
 end)
 
 othersTab.MouseButton1Click:Connect(function()
-	homeContent.Visible = false
-	othersContent.Visible = true
-	homeTab.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-	othersTab.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	homeTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-	othersTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+    homeContent.Visible = false
+    othersContent.Visible = true
+    homeTab.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    othersTab.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    homeTab.TextColor3 = Color3.fromRGB(180,180,180)
+    othersTab.TextColor3 = Color3.fromRGB(255,255,255)
 end)
 
-local espFrame = Instance.new("Frame")
-espFrame.Size = UDim2.new(1, 0, 0, 50)
-espFrame.Position = UDim2.new(0, 0, 0, 0)
-espFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-espFrame.Parent = othersContent
-Instance.new("UICorner", espFrame).CornerRadius = UDim.new(0, 12)
+local espFrame = cleanPanel(othersContent, UDim2.new(1,0,0,180), UDim2.new(0,0,0,0), Color3.fromRGB(22,22,22), 0)
 
 local espLabel = Instance.new("TextLabel")
-espLabel.Size = UDim2.new(0.7, 0, 1, 0)
+espLabel.Size = UDim2.new(0.7,0,0,40)
+espLabel.Position = UDim2.new(0,15,0,5)
 espLabel.BackgroundTransparency = 1
 espLabel.Text = "Base ESP"
-espLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+espLabel.TextColor3 = Color3.fromRGB(255,255,255)
 espLabel.Font = Enum.Font.GothamBold
 espLabel.TextSize = 18
 espLabel.TextXAlignment = Enum.TextXAlignment.Left
-espLabel.Position = UDim2.new(0, 15, 0, 0)
 espLabel.Parent = espFrame
 
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 60, 0, 30)
-toggleBtn.Position = UDim2.new(1, -75, 0.5, -15)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+toggleBtn.Size = UDim2.new(0,60,0,30)
+toggleBtn.Position = UDim2.new(1,-75,0,10)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
 toggleBtn.Text = "OFF"
-toggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+toggleBtn.TextColor3 = Color3.fromRGB(200,200,200)
 toggleBtn.Font = Enum.Font.GothamBold
 toggleBtn.TextSize = 16
 toggleBtn.Parent = espFrame
-Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0,10)
+
+local moneyBtn = Instance.new("TextButton")
+moneyBtn.Size = UDim2.new(1,-30,0,30)
+moneyBtn.Position = UDim2.new(0,15,0,50)
+moneyBtn.BackgroundColor3 = Color3.fromRGB(0,120,0)
+moneyBtn.Text = "Show Best $/s: ON"
+moneyBtn.TextColor3 = Color3.fromRGB(255,255,255)
+moneyBtn.Font = Enum.Font.GothamBold
+moneyBtn.TextSize = 15
+moneyBtn.Parent = espFrame
+Instance.new("UICorner", moneyBtn).CornerRadius = UDim.new(0,10)
+
+local percentBtn = Instance.new("TextButton")
+percentBtn.Size = UDim2.new(1,-30,0,30)
+percentBtn.Position = UDim2.new(0,15,0,85)
+percentBtn.BackgroundColor3 = Color3.fromRGB(0,120,0)
+percentBtn.Text = "Show Best %: ON"
+percentBtn.TextColor3 = Color3.fromRGB(255,255,255)
+percentBtn.Font = Enum.Font.GothamBold
+percentBtn.TextSize = 15
+percentBtn.Parent = espFrame
+Instance.new("UICorner", percentBtn).CornerRadius = UDim.new(0,10)
+
+local timerLabel = Instance.new("TextLabel")
+timerLabel.Size = UDim2.new(0.7,0,0,40)
+timerLabel.Position = UDim2.new(0,15,0,125)
+timerLabel.BackgroundTransparency = 1
+timerLabel.Text = "Base Timer Display"
+timerLabel.TextColor3 = Color3.fromRGB(255,255,255)
+timerLabel.Font = Enum.Font.GothamBold
+timerLabel.TextSize = 18
+timerLabel.TextXAlignment = Enum.TextXAlignment.Left
+timerLabel.Parent = espFrame
+
+local timerBtn = Instance.new("TextButton")
+timerBtn.Size = UDim2.new(0,60,0,30)
+timerBtn.Position = UDim2.new(1,-75,0,135)
+timerBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+timerBtn.Text = "OFF"
+timerBtn.TextColor3 = Color3.fromRGB(200,200,200)
+timerBtn.Font = Enum.Font.GothamBold
+timerBtn.TextSize = 16
+timerBtn.Parent = espFrame
+Instance.new("UICorner", timerBtn).CornerRadius = UDim.new(0,10)
+
+local function createTimerDisplay()
+    if timerDisplayFrame then timerDisplayFrame:Destroy() end
+    local sideButtons = LocalPlayer.PlayerGui:FindFirstChild("SideButtons")
+    if not sideButtons then return end
+    local earnMoneyTemplate = sideButtons
+        :FindFirstChild("TopCanvas")
+        :FindFirstChild("Datas")
+        :FindFirstChild("Coins")
+        :FindFirstChild("More")
+        :FindFirstChild("EarnMoney")
+    if not earnMoneyTemplate then return end
+    timerDisplayFrame = earnMoneyTemplate:Clone()
+    timerDisplayFrame.Name = "BaseTimerDisplay"
+    timerDisplayFrame.Size = UDim2.new(0,156,0,42)
+    timerDisplayFrame.Parent = earnMoneyTemplate.Parent
+    local main = timerDisplayFrame:FindFirstChild("Main")
+    if main then
+        if main:FindFirstChild("Text1") then
+            timerTextLabel = main.Text1
+            timerTextLabel.Size = UDim2.new(1,0,1,0)
+            timerTextLabel.Position = UDim2.new(0,0,0,0)
+            timerTextLabel.BackgroundTransparency = 1
+            timerTextLabel.TextColor3 = Color3.fromRGB(255,255,255)
+            timerTextLabel.Font = Enum.Font.GothamBold
+            timerTextLabel.TextSize = 16
+            timerTextLabel.TextXAlignment = Enum.TextXAlignment.Center
+            timerTextLabel.TextYAlignment = Enum.TextYAlignment.Center
+        end
+        if main:FindFirstChild("Text2") then main.Text2:Destroy() end
+        if main:FindFirstChild("Value") then main.Value:Destroy() end
+        if main:FindFirstChild("Icon") then main.Icon:Destroy() end
+    end
+end
+
+local function updateTimerDisplay()
+    if not timerDisplayEnabled or not timerTextLabel then return end
+    local tycoon = getTycoonOf(LocalPlayer.Name)
+    if not tycoon then
+        timerTextLabel.Text = "No Tycoon"
+        return
+    end
+    local tycoonModel = tycoon:FindFirstChild("Tycoon")
+    local ff = tycoonModel and tycoonModel:FindFirstChild("ForcefieldFolder")
+    local screen = ff and ff:FindFirstChild("Screen")
+    local part = screen and screen:FindFirstChild("Screen")
+    local gui = part and part:FindFirstChild("SurfaceGui")
+    local timeLabel = gui and gui:FindFirstChild("Time")
+    if not timeLabel then
+        timerTextLabel.Text = "No Timer"
+        return
+    end
+    local txt = timeLabel.Text
+    if txt == "0s" then
+        timerTextLabel.Text = "OPEN"
+        timerTextLabel.TextColor3 = Color3.fromRGB(0,255,100)
+    elseif txt:match("%d+s") then
+        timerTextLabel.Text = txt
+        timerTextLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    else
+        timerTextLabel.Text = "CLOSED"
+        timerTextLabel.TextColor3 = Color3.fromRGB(255,80,80)
+    end
+end
+
+local function enableTimerDisplay()
+    if timerDisplayEnabled then return end
+    timerDisplayEnabled = true
+    createTimerDisplay()
+    timerBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+    timerBtn.Text = "ON"
+    timerBtn.TextColor3 = Color3.fromRGB(255,255,255)
+end
+
+local function disableTimerDisplay()
+    if not timerDisplayEnabled then return end
+    timerDisplayEnabled = false
+    if timerDisplayFrame then timerDisplayFrame:Destroy() end
+    timerBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    timerBtn.Text = "OFF"
+    timerBtn.TextColor3 = Color3.fromRGB(200,200,200)
+end
+
+timerBtn.MouseButton1Click:Connect(function()
+    if timerDisplayEnabled then disableTimerDisplay() else enableTimerDisplay() end
+end)
+
+local function createFavoriteTimerDisplay(favoriteName)
+    if favoriteTimerDisplayFrame then favoriteTimerDisplayFrame:Destroy() end
+    local sideButtons = LocalPlayer.PlayerGui:FindFirstChild("SideButtons")
+    if not sideButtons then return end
+    local earnMoneyTemplate = sideButtons
+        :FindFirstChild("TopCanvas")
+        :FindFirstChild("Datas")
+        :FindFirstChild("Coins")
+        :FindFirstChild("More")
+        :FindFirstChild("EarnMoney")
+    if not earnMoneyTemplate then return end
+    favoriteTimerDisplayFrame = earnMoneyTemplate:Clone()
+    favoriteTimerDisplayFrame.Name = "FavoriteTimerDisplay"
+    favoriteTimerDisplayFrame.Size = UDim2.new(0,156,0,42)
+    favoriteTimerDisplayFrame.Position = UDim2.new(0,0,0,42)
+    favoriteTimerDisplayFrame.Parent = earnMoneyTemplate.Parent
+    local main = favoriteTimerDisplayFrame:FindFirstChild("Main")
+    if main then
+        if main:FindFirstChild("Text1") then
+            favoriteTimerTextLabel = main.Text1
+            favoriteTimerTextLabel.Size = UDim2.new(1,0,1,0)
+            favoriteTimerTextLabel.Position = UDim2.new(0,0,0,0)
+            favoriteTimerTextLabel.BackgroundTransparency = 1
+            favoriteTimerTextLabel.TextColor3 = Color3.fromRGB(255,255,255)
+            favoriteTimerTextLabel.Font = Enum.Font.GothamBold
+            favoriteTimerTextLabel.TextSize = 16
+            favoriteTimerTextLabel.TextXAlignment = Enum.TextXAlignment.Center
+            favoriteTimerTextLabel.TextYAlignment = Enum.TextYAlignment.Center
+        end
+        if main:FindFirstChild("Text2") then main.Text2:Destroy() end
+        if main:FindFirstChild("Value") then main.Value:Destroy() end
+        if main:FindFirstChild("Icon") then main.Icon:Destroy() end
+    end
+end
+
+local function updateFavoriteTimerDisplay()
+    if not favoritePlayer or not favoriteTimerTextLabel then return end
+    local tycoon = getTycoonOf(favoritePlayer)
+    if not tycoon then
+        favoriteTimerTextLabel.Text = "No Tycoon"
+        return
+    end
+    local tycoonModel = tycoon:FindFirstChild("Tycoon")
+    local ff = tycoonModel and tycoonModel:FindFirstChild("ForcefieldFolder")
+    local screen = ff and ff:FindFirstChild("Screen")
+    local part = screen and screen:FindFirstChild("Screen")
+    local gui = part and part:FindFirstChild("SurfaceGui")
+    local timeLabel = gui and gui:FindFirstChild("Time")
+    if not timeLabel then
+        favoriteTimerTextLabel.Text = "No Timer"
+        return
+    end
+    local txt = timeLabel.Text
+    if txt == "0s" then
+        favoriteTimerTextLabel.Text = "OPEN"
+        favoriteTimerTextLabel.TextColor3 = Color3.fromRGB(0,255,100)
+    elseif txt:match("%d+s") then
+        favoriteTimerTextLabel.Text = txt
+        favoriteTimerTextLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    else
+        favoriteTimerTextLabel.Text = "CLOSED"
+        favoriteTimerTextLabel.TextColor3 = Color3.fromRGB(255,80,80)
+    end
+end
+
+local function removeFavoriteTimerDisplay()
+    if favoriteTimerDisplayFrame then favoriteTimerDisplayFrame:Destroy() end
+    favoriteTimerDisplayFrame = nil
+    favoriteTimerTextLabel = nil
+end
 
 local function parseProductionValue(text)
-	if not text then return 0 end
-	text = text:gsub("%s", ""):gsub(",", "")
-	local num = text:match("^([%d%.]+)")
-	if not num then return 0 end
-	num = tonumber(num)
-	if not num then return 0 end
-
-	local suffix = text:match("^[%d%.]+(%a+)")
-	if suffix == "K" then num = num * 1000
-	elseif suffix == "M" then num = num * 1000000
-	elseif suffix == "B" then num = num * 1000000000
-	elseif suffix == "T" then num = num * 1000000000000
-	end
-	return num
+    if not text then return 0 end
+    text = text:gsub("%s",""):gsub(",","")
+    local num = text:match("^([%d%.]+)")
+    if not num then return 0 end
+    num = tonumber(num)
+    if not num then return 0 end
+    local suffix = text:match("^[%d%.]+(%a+)")
+    if suffix == "K" then num *= 1000
+    elseif suffix == "M" then num *= 1000000
+    elseif suffix == "B" then num *= 1000000000
+    elseif suffix == "T" then num *= 1000000000000 end
+    return num
 end
 
-local function resetCurrentBestBillboard()
-	if currentBestBillboard and currentBestBillboard.Parent then
-		currentBestBillboard.Size = UDim2.new(7, 14, 4, 8)
-		currentBestBillboard.MaxDistance = 50
-	end
-	currentBestBillboard = nil
+local function resetBillboard(bb)
+    if bb and bb.Parent then
+        bb.Size = UDim2.new(7,14,4,8)
+        bb.MaxDistance = 50
+    end
 end
 
-local function applyToBestBillboard(billboard)
-	if not billboard or not billboard.Parent then return end
-	billboard.Size = UDim2.new(0, 100, 0, 100)
-	billboard.MaxDistance = 1000000
-	currentBestBillboard = billboard
+local function applyBestBillboard(bb)
+    if bb and bb.Parent then
+        bb.Size = UDim2.new(0,100,0,100)
+        bb.MaxDistance = 1000000
+    end
 end
 
-local function findBestModel()
-	local newBestBillboard = nil
-	local newBestValue = -1
+local function updateBestModels()
+    if not espEnabled then return end
+    local bestMoneyVal = -1
+    local bestPercentVal = -1
+    local bestMoneyBillboards = {}
+    local bestPercentBillboards = {}
 
-	for _, tycoon in ipairs(tycoons:GetChildren()) do
-		local temp = tycoon:FindFirstChild("Temporary")
-		if not temp then continue end
+    for _, tycoon in ipairs(tycoons:GetChildren()) do
+        local temp = tycoon:FindFirstChild("Temporary")
+        if not temp then continue end
+        for _, model in ipairs(temp:GetChildren()) do
+            if not model:IsA("Model") then continue end
+            local trashInfo = model:FindFirstChild("TrashInfo")
+            if not trashInfo or not trashInfo:IsA("BillboardGui") then continue end
+            local boost = trashInfo:FindFirstChild("ProducingBoost")
+            if boost and boost:IsA("TextLabel") and boost.Visible then
+                local perc = boost.Text:match("(%d+)%% YOUR BEST")
+                if perc then
+                    local val = tonumber(perc)
+                    if val then
+                        if val > bestPercentVal then
+                            bestPercentVal = val
+                            bestPercentBillboards = {trashInfo}
+                        elseif val == bestPercentVal then
+                            table.insert(bestPercentBillboards, trashInfo)
+                        end
+                    end
+                end
+            end
+            local prod = trashInfo:FindFirstChild("Producing")
+            if prod and prod:IsA("TextLabel") and prod.Visible then
+                local val = parseProductionValue(prod.Text)
+                if val > 0 then
+                    if val > bestMoneyVal then
+                        bestMoneyVal = val
+                        bestMoneyBillboards = {trashInfo}
+                    elseif val == bestMoneyVal then
+                        table.insert(bestMoneyBillboards, trashInfo)
+                    end
+                end
+            end
+        end
+    end
 
-		for _, model in ipairs(temp:GetChildren()) do
-			if not model:IsA("Model") then continue end
-			local trashInfo = model:FindFirstChild("TrashInfo")
-			if not trashInfo or not trashInfo:IsA("BillboardGui") then continue end
+    for _, tycoon in ipairs(tycoons:GetChildren()) do
+        local temp = tycoon:FindFirstChild("Temporary")
+        if temp then
+            for _, model in ipairs(temp:GetChildren()) do
+                if model:IsA("Model") then
+                    local trashInfo = model:FindFirstChild("TrashInfo")
+                    if trashInfo and trashInfo:IsA("BillboardGui") then
+                        resetBillboard(trashInfo)
+                    end
+                end
+            end
+        end
+    end
 
-			local boostLabel = trashInfo:FindFirstChild("ProducingBoost")
-			if boostLabel and boostLabel:IsA("TextLabel") and boostLabel.Visible then
-				local txt = boostLabel.Text
-				local percent = txt:match("(%d+)%% YOUR BEST")
-				if percent then
-					local val = tonumber(percent)
-					if val and val > newBestValue then
-						newBestValue = val
-						newBestBillboard = trashInfo
-					end
-				end
-			end
-
-			local producingLabel = trashInfo:FindFirstChild("Producing")
-			if producingLabel and producingLabel:IsA("TextLabel") and producingLabel.Visible then
-				local val = parseProductionValue(producingLabel.Text)
-				if val > newBestValue then
-					newBestValue = val
-					newBestBillboard = trashInfo
-				end
-			end
-		end
-	end
-
-	if newBestBillboard ~= currentBestBillboard then
-		resetCurrentBestBillboard()
-		if newBestBillboard then
-			applyToBestBillboard(newBestBillboard)
-		end
-	end
+    if showMoneyBest and #bestMoneyBillboards > 0 then
+        for _, bb in ipairs(bestMoneyBillboards) do
+            applyBestBillboard(bb)
+        end
+    end
+    if showPercentBest and #bestPercentBillboards > 0 then
+        for _, bb in ipairs(bestPercentBillboards) do
+            applyBestBillboard(bb)
+        end
+    end
 end
 
 local function applyESP()
-	if espEnabled then return end
-	espEnabled = true
-	toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-	toggleBtn.Text = "ON"
-	toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    if espEnabled then return end
+    espEnabled = true
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+    toggleBtn.Text = "ON"
+    toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    for part,_ in pairs(originalTransparencies) do
+        if part and part.Parent then part.Transparency = 1 end
+    end
+    originalTransparencies = {}
+    for _,hl in pairs(highlights) do if hl and hl.Parent then hl:Destroy() end end
+    highlights = {}
 
-	for part, _ in pairs(originalTransparencies) do
-		if part and part.Parent then
-			part.Transparency = 1
-		end
-	end
-	originalTransparencies = {}
-	for _, hl in pairs(highlights) do
-		if hl and hl.Parent then hl:Destroy() end
-	end
-	highlights = {}
-	resetCurrentBestBillboard()
-
-	for _, tycoon in ipairs(tycoons:GetChildren()) do
-		local tycoonModel = tycoon:FindFirstChild("Tycoon")
-		if not tycoonModel then continue end
-
-		for _, folderName in ipairs({"Const", "Walls", "Builded"}) do
-			local folder = tycoonModel:FindFirstChild(folderName)
-			if folder then
-				for _, obj in ipairs(folder:GetDescendants()) do
-					if obj:IsA("BasePart") then
-						if not originalTransparencies[obj] then
-							originalTransparencies[obj] = obj.Transparency
-						end
-						obj.Transparency = 0.7
-					end
-				end
-			end
-		end
-
-		local builded = tycoonModel:FindFirstChild("Builded")
-		if builded then
-			for _, floorName in ipairs({"Floor1", "Floor2"}) do
-				local floor = builded:FindFirstChild(floorName)
-				if floor then
-					local toAdd = floor:FindFirstChild("ToAdd")
-					if toAdd then
-						local slotsName = "Slots" .. (floorName == "Floor1" and "2" or "3")
-						local slots = toAdd:FindFirstChild(slotsName)
-						if slots then
-							for _, part in ipairs(slots:GetDescendants()) do
-								if part:IsA("BasePart") then
-									if not originalTransparencies[part] then
-										originalTransparencies[part] = part.Transparency
-									end
-									part.Transparency = 1
-								end
-							end
-						end
-					end
-				end
-			end
-		end
-
-		local temp = tycoon:FindFirstChild("Temporary")
-		if temp then
-			for _, model in ipairs(temp:GetChildren()) do
-				if model:IsA("Model") then
-					local hl = highlights[model]
-					if not hl then
-						hl = Instance.new("Highlight")
-						hl.OutlineColor = Color3.fromRGB(68, 68, 68)
-						hl.FillTransparency = 1
-						hl.Enabled = true
-						hl.Adornee = model
-						hl.Parent = model
-						highlights[model] = hl
-					end
-				end
-			end
-		end
-	end
-
-	findBestModel()
+    for _, tycoon in ipairs(tycoons:GetChildren()) do
+        local tycoonModel = tycoon:FindFirstChild("Tycoon")
+        if not tycoonModel then continue end
+        for _, folderName in ipairs({"Const","Walls","Builded"}) do
+            local folder = tycoonModel:FindFirstChild(folderName)
+            if folder then
+                for _, obj in ipairs(folder:GetDescendants()) do
+                    if obj:IsA("BasePart") then
+                        originalTransparencies[obj] = obj.Transparency
+                        obj.Transparency = 0.7
+                    end
+                end
+            end
+        end
+        local builded = tycoonModel:FindFirstChild("Builded")
+        if builded then
+            for _, floorName in ipairs({"Floor1","Floor2"}) do
+                local floor = builded:FindFirstChild(floorName)
+                if floor then
+                    local toAdd = floor:FindFirstChild("ToAdd")
+                    if toAdd then
+                        local slots = toAdd:FindFirstChild("Slots"..(floorName=="Floor1" and "2" or "3"))
+                        if slots then
+                            for _, part in ipairs(slots:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    originalTransparencies[part] = part.Transparency
+                                    part.Transparency = 1
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        local temp = tycoon:FindFirstChild("Temporary")
+        if temp then
+            for _, model in ipairs(temp:GetChildren()) do
+                if model:IsA("Model") then
+                    local hl = Instance.new("Highlight")
+                    hl.OutlineColor = Color3.fromRGB(68,68,68)
+                    hl.FillTransparency = 1
+                    hl.Enabled = true
+                    hl.Adornee = model
+                    hl.Parent = model
+                    highlights[model] = hl
+                end
+            end
+        end
+    end
+    updateBestModels()
 end
 
 local function removeESP()
-	if not espEnabled then return end
-	espEnabled = false
-	toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	toggleBtn.Text = "OFF"
-	toggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-
-	for part, trans in pairs(originalTransparencies) do
-		if part and part.Parent then
-			part.Transparency = trans
-		end
-	end
-	originalTransparencies = {}
-
-	for _, hl in pairs(highlights) do
-		if hl and hl.Parent then hl:Destroy() end
-	end
-	highlights = {}
-
-	resetCurrentBestBillboard()
+    if not espEnabled then return end
+    espEnabled = false
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    toggleBtn.Text = "OFF"
+    toggleBtn.TextColor3 = Color3.fromRGB(200,200,200)
+    for part,trans in pairs(originalTransparencies) do
+        if part and part.Parent then part.Transparency = trans end
+    end
+    originalTransparencies = {}
+    for _,hl in pairs(highlights) do if hl and hl.Parent then hl:Destroy() end end
+    highlights = {}
+    for _, tycoon in ipairs(tycoons:GetChildren()) do
+        local temp = tycoon:FindFirstChild("Temporary")
+        if temp then
+            for _, model in ipairs(temp:GetChildren()) do
+                if model:IsA("Model") then
+                    local trashInfo = model:FindFirstChild("TrashInfo")
+                    if trashInfo and trashInfo:IsA("BillboardGui") then
+                        resetBillboard(trashInfo)
+                    end
+                end
+            end
+        end
+    end
+    currentMoneyBillboard = nil
+    currentPercentBillboard = nil
 end
 
 toggleBtn.MouseButton1Click:Connect(function()
-	if espEnabled then
-		removeESP()
-	else
-		applyESP()
-	end
+    if espEnabled then removeESP() else applyESP() end
 end)
 
-RunService.Heartbeat:Connect(function()
-	if espEnabled then
-		task.spawn(findBestModel)
-	end
+moneyBtn.MouseButton1Click:Connect(function()
+    showMoneyBest = not showMoneyBest
+    moneyBtn.Text = "Show Best $/s: " .. (showMoneyBest and "ON" or "OFF")
+    moneyBtn.BackgroundColor3 = showMoneyBest and Color3.fromRGB(0,120,0) or Color3.fromRGB(80,0,0)
+    updateBestModels()
+end)
+
+percentBtn.MouseButton1Click:Connect(function()
+    showPercentBest = not showPercentBest
+    percentBtn.Text = "Show Best %: " .. (showPercentBest and "ON" or "OFF")
+    percentBtn.BackgroundColor3 = showPercentBest and Color3.fromRGB(0,120,0) or Color3.fromRGB(80,0,0)
+    updateBestModels()
 end)
 
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, 0, 0, 410)
-scroll.Position = UDim2.new(0, 0, 0, 0)
-scroll.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+scroll.Size = UDim2.new(1,0,0,410)
+scroll.Position = UDim2.new(0,0,0,0)
+scroll.BackgroundColor3 = Color3.fromRGB(22,22,22)
 scroll.ScrollBarThickness = 0
-scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.Parent = homeContent
-Instance.new("UICorner", scroll).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", scroll).CornerRadius = UDim.new(0,14)
 
 local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 8)
+layout.Padding = UDim.new(0,8)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Parent = scroll
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-	scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+    scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 20)
 end)
 
 local playerButtons = {}
 
 local function createModelButton(parent, model, ownerName, displayName)
-	local b = Instance.new("TextButton")
-	b.Size = UDim2.new(1, 0, 0, 70)
-	b.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-	b.Text = ""
-	b.AutoButtonColor = false
-	b.Parent = parent
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 12)
-
-	local vf = Instance.new("ViewportFrame")
-	vf.Size = UDim2.new(0, 60, 0, 60)
-	vf.Position = UDim2.new(0, 8, 0.5, -30)
-	vf.BackgroundTransparency = 1
-	vf.Parent = b
-	Instance.new("UICorner", vf).CornerRadius = UDim.new(0, 10)
-
-	local sourceModel = findRarityModel(model.Name)
-	if sourceModel then
-		setupViewport(vf, sourceModel)
-	end
-
-	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(0.6, 0, 0, 26)
-	nameLabel.Position = UDim2.new(0, 78, 0, 12)
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.Text = model.Name
-	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.TextSize = 16
-	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-	nameLabel.Parent = b
-
-	local ownerLabel = Instance.new("TextLabel")
-	ownerLabel.Size = UDim2.new(0.6, 0, 0, 20)
-	ownerLabel.Position = UDim2.new(0, 78, 0, 38)
-	ownerLabel.BackgroundTransparency = 1
-	ownerLabel.Text = (displayName or ownerName) .. " (@" .. ownerName .. ")"
-	ownerLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-	ownerLabel.Font = Enum.Font.Gotham
-	ownerLabel.TextSize = 13
-	ownerLabel.TextXAlignment = Enum.TextXAlignment.Left
-	ownerLabel.Parent = b
-
-	local trashInfo = model:FindFirstChild("TrashInfo")
-	if trashInfo then
-		local visibleMutations = {}
-		for _, obj in ipairs(trashInfo:GetChildren()) do
-			if obj:IsA("TextLabel") and obj.Name == "MutationTemplate" and obj.Visible then
-				table.insert(visibleMutations, obj)
-			end
-		end
-		for i, mutation in ipairs(visibleMutations) do
-			local square = Instance.new("Frame")
-			square.Size = UDim2.new(0, 32, 0, 32)
-			square.Position = UDim2.new(1, -40 - ((i-1)*36), 0.5, -16)
-			square.BackgroundColor3 = mutation.TextColor3
-			square.Parent = b
-			Instance.new("UICorner", square).CornerRadius = UDim.new(0, 8)
-			local grad = mutation:FindFirstChildOfClass("UIGradient")
-			if grad then
-				local newGrad = grad:Clone()
-				newGrad.Rotation = 90
-				newGrad.Parent = square
-			end
-		end
-	end
-
-	b.MouseButton1Click:Connect(function()
-		local root = model:FindFirstChild("Root")
-		if root and LocalPlayer.Character then
-			LocalPlayer.Character:PivotTo(root.CFrame)
-		end
-	end)
-
-	return b
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1,0,0,70)
+    b.BackgroundColor3 = Color3.fromRGB(28,28,28)
+    b.Text = ""
+    b.AutoButtonColor = false
+    b.Parent = parent
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,12)
+    local vf = Instance.new("ViewportFrame")
+    vf.Size = UDim2.new(0,60,0,60)
+    vf.Position = UDim2.new(0,8,0.5,-30)
+    vf.BackgroundTransparency = 1
+    vf.Parent = b
+    Instance.new("UICorner", vf).CornerRadius = UDim.new(0,10)
+    local sourceModel = findRarityModel(model.Name)
+    if sourceModel then setupViewport(vf, sourceModel) end
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0.6,0,0,26)
+    nameLabel.Position = UDim2.new(0,78,0,12)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = model.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 16
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = b
+    local ownerLabel = Instance.new("TextLabel")
+    ownerLabel.Size = UDim2.new(0.6,0,0,20)
+    ownerLabel.Position = UDim2.new(0,78,0,38)
+    ownerLabel.BackgroundTransparency = 1
+    ownerLabel.Text = (displayName or ownerName).." (@"..ownerName..")"
+    ownerLabel.TextColor3 = Color3.fromRGB(180,180,180)
+    ownerLabel.Font = Enum.Font.Gotham
+    ownerLabel.TextSize = 13
+    ownerLabel.TextXAlignment = Enum.TextXAlignment.Left
+    ownerLabel.Parent = b
+    local trashInfo = model:FindFirstChild("TrashInfo")
+    if trashInfo then
+        local mutations = {}
+        for _, obj in ipairs(trashInfo:GetChildren()) do
+            if obj:IsA("TextLabel") and obj.Name == "MutationTemplate" and obj.Visible then
+                table.insert(mutations, obj)
+            end
+        end
+        for i, mut in ipairs(mutations) do
+            local sq = Instance.new("Frame")
+            sq.Size = UDim2.new(0,32,0,32)
+            sq.Position = UDim2.new(1,-40-((i-1)*36),0.5,-16)
+            sq.BackgroundColor3 = mut.TextColor3
+            sq.Parent = b
+            Instance.new("UICorner", sq).CornerRadius = UDim.new(0,8)
+            local grad = mut:FindFirstChildOfClass("UIGradient")
+            if grad then grad:Clone().Parent = sq end
+        end
+    end
+    b.MouseButton1Click:Connect(function()
+        local root = model:FindFirstChild("Root")
+        if root and LocalPlayer.Character then
+            LocalPlayer.Character:PivotTo(root.CFrame)
+        end
+    end)
 end
 
 local function makePlayerButton(plr)
-	local playerName = plr.Name
-	local displayName = plr.DisplayName
-	if playerButtons[playerName] then
-		playerButtons[playerName].container:Destroy()
-	end
-
-	local container = Instance.new("Frame")
-	container.Size = UDim2.new(1, 0, 0, 68)
-	container.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-	container.Parent = scroll
-	Instance.new("UICorner", container).CornerRadius = UDim.new(0, 14)
-
-	local icon = Instance.new("ImageLabel")
-	icon.Size = UDim2.new(0, 50, 0, 50)
-	icon.Position = UDim2.new(0, 10, 0.5, -25)
-	icon.BackgroundTransparency = 1
-	icon.Image = "rbxthumb://type=AvatarHeadShot&id=" .. plr.UserId .. "&w=48&h=48"
-	icon.Parent = container
-	Instance.new("UICorner", icon).CornerRadius = UDim.new(1, 0)
-
-	local displayLabel = Instance.new("TextLabel")
-	displayLabel.Size = UDim2.new(0.6, 0, 0, 24)
-	displayLabel.Position = UDim2.new(0, 70, 0, 12)
-	displayLabel.BackgroundTransparency = 1
-	displayLabel.Text = displayName
-	displayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	displayLabel.Font = Enum.Font.GothamBold
-	displayLabel.TextSize = 17
-	displayLabel.TextXAlignment = Enum.TextXAlignment.Left
-	displayLabel.Parent = container
-
-	local userLabel = Instance.new("TextLabel")
-	userLabel.Size = UDim2.new(0.6, 0, 0, 20)
-	userLabel.Position = UDim2.new(0, 70, 0, 36)
-	userLabel.BackgroundTransparency = 1
-	userLabel.Text = "@" .. playerName
-	userLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-	userLabel.Font = Enum.Font.Gotham
-	userLabel.TextSize = 14
-	userLabel.TextXAlignment = Enum.TextXAlignment.Left
-	userLabel.Parent = container
-
-	local statusLabel = Instance.new("TextLabel")
-	statusLabel.Size = UDim2.new(0.3, 0, 0, 30)
-	statusLabel.Position = UDim2.new(0.7, 0, 0.5, -15)
-	statusLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	statusLabel.Text = "Loading..."
-	statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-	statusLabel.Font = Enum.Font.GothamBold
-	statusLabel.TextSize = 14
-	statusLabel.Parent = container
-	Instance.new("UICorner", statusLabel).CornerRadius = UDim.new(0, 10)
-
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, 0, 1, 0)
-	btn.BackgroundTransparency = 1
-	btn.Text = ""
-	btn.Parent = container
-
-	local conn
-	local function updateStatus()
-		local tycoon = getTycoonOf(playerName)
-		if not tycoon then
-			statusLabel.Text = "No Tycoon"
-			return
-		end
-		local tycoonModel = tycoon:FindFirstChild("Tycoon")
-		local ffFolder = tycoonModel and tycoonModel:FindFirstChild("ForcefieldFolder")
-		local screenModel = ffFolder and ffFolder:FindFirstChild("Screen")
-		local screenPart = screenModel and screenModel:FindFirstChild("Screen")
-		local gui = screenPart and screenPart:FindFirstChild("SurfaceGui")
-		local timeLabel = gui and gui:FindFirstChild("Time")
-		if not timeLabel then
-			statusLabel.Text = "No Timer"
-			return
-		end
-		if conn then conn:Disconnect() end
-		conn = RunService.Heartbeat:Connect(function()
-			if not timeLabel.Parent then return end
-			local txt = timeLabel.Text
-			if txt == "0s" then
-				statusLabel.Text = "OPEN"
-				statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-				statusLabel.BackgroundColor3 = Color3.fromRGB(0, 80, 40)
-			elseif txt:match("%d+s") then
-				statusLabel.Text = txt
-				statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-				statusLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-			else
-				statusLabel.Text = "CLOSED"
-				statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-				statusLabel.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
-			end
-		end)
-	end
-	updateStatus()
-
-	plr.AncestryChanged:Connect(function()
-		if not plr.Parent then
-			statusLabel.Text = "Left The Game"
-			statusLabel.TextColor3 = Color3.fromRGB(255, 220, 0)
-			statusLabel.BackgroundColor3 = Color3.fromRGB(80, 70, 0)
-			if conn then conn:Disconnect() end
-		end
-	end)
-
-	btn.MouseButton1Click:Connect(function()
-		if playerName == LocalPlayer.Name then return end
-		if openPlayerFrames[playerName] then
-			openPlayerFrames[playerName]:Destroy()
-			openPlayerFrames[playerName] = nil
-			return
-		end
-		local tycoon = getTycoonOf(playerName)
-		if not tycoon then return end
-		local tycoonTemp = tycoon:FindFirstChild("Temporary")
-		local frame = cleanPanel(screenGui, UDim2.new(0, 400, 0, 560), UDim2.new(0.5, 220, 0.2, 0), Color3.fromRGB(18, 18, 18), 0)
-		frame.Active = true
-		frame.Draggable = true
-
-		local title = Instance.new("TextLabel")
-		title.Size = UDim2.new(1, -40, 0, 50)
-		title.Position = UDim2.new(0, 20, 0, 10)
-		title.BackgroundTransparency = 1
-		title.Font = Enum.Font.GothamBold
-		title.Text = displayName .. " (@" .. playerName .. ")"
-		title.TextSize = 18
-		title.TextColor3 = Color3.fromRGB(255, 255, 255)
-		title.TextXAlignment = Enum.TextXAlignment.Left
-		title.Parent = frame
-
-		local closeBtn = Instance.new("TextButton")
-		closeBtn.Size = UDim2.new(0, 36, 0, 36)
-		closeBtn.Position = UDim2.new(1, -50, 0, 12)
-		closeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-		closeBtn.Text = "x"
-		closeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-		closeBtn.Font = Enum.Font.GothamBold
-		closeBtn.TextSize = 22
-		closeBtn.AutoButtonColor = false
-		closeBtn.Parent = frame
-		Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
-		closeBtn.MouseButton1Click:Connect(function()
-			frame:Destroy()
-			openPlayerFrames[playerName] = nil
-		end)
-
-		local modelsScroll = Instance.new("ScrollingFrame")
-		modelsScroll.Size = UDim2.new(1, -40, 1, -70)
-		modelsScroll.Position = UDim2.new(0, 20, 0, 70)
-		modelsScroll.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-		modelsScroll.ScrollBarThickness = 0
-		modelsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-		modelsScroll.Parent = frame
-		Instance.new("UICorner", modelsScroll).CornerRadius = UDim.new(0, 12)
-
-		local mLayout = Instance.new("UIListLayout")
-		mLayout.Padding = UDim.new(0, 6)
-		mLayout.Parent = modelsScroll
-		mLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-			modelsScroll.CanvasSize = UDim2.new(0, 0, 0, mLayout.AbsoluteContentSize.Y + 20)
-		end)
-
-		if tycoonTemp then
-			for _, model in ipairs(tycoonTemp:GetChildren()) do
-				if model:IsA("Model") then
-					createModelButton(modelsScroll, model, playerName, displayName)
-				end
-			end
-		end
-		openPlayerFrames[playerName] = frame
-	end)
-
-	playerButtons[playerName] = { container = container }
+    local playerName = plr.Name
+    local displayName = plr.DisplayName
+    if playerButtons[playerName] then playerButtons[playerName].container:Destroy() end
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1,0,0,68)
+    container.BackgroundColor3 = Color3.fromRGB(28,28,28)
+    container.Parent = scroll
+    Instance.new("UICorner", container).CornerRadius = UDim.new(0,14)
+    local icon = Instance.new("ImageLabel")
+    icon.Size = UDim2.new(0,50,0,50)
+    icon.Position = UDim2.new(0,10,0.5,-25)
+    icon.BackgroundTransparency = 1
+    icon.Image = "rbxthumb://type=AvatarHeadShot&id="..plr.UserId.."&w=48&h=48"
+    icon.Parent = container
+    Instance.new("UICorner", icon).CornerRadius = UDim.new(1,0)
+    local displayLabel = Instance.new("TextLabel")
+    displayLabel.Size = UDim2.new(0.6,0,0,24)
+    displayLabel.Position = UDim2.new(0,70,0,12)
+    displayLabel.BackgroundTransparency = 1
+    displayLabel.Text = displayName
+    displayLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    displayLabel.Font = Enum.Font.GothamBold
+    displayLabel.TextSize = 17
+    displayLabel.TextXAlignment = Enum.TextXAlignment.Left
+    displayLabel.Parent = container
+    local userLabel = Instance.new("TextLabel")
+    userLabel.Size = UDim2.new(0.6,0,0,20)
+    userLabel.Position = UDim2.new(0,70,0,36)
+    userLabel.BackgroundTransparency = 1
+    userLabel.Text = "@"..playerName
+    userLabel.TextColor3 = Color3.fromRGB(180,180,180)
+    userLabel.Font = Enum.Font.Gotham
+    userLabel.TextSize = 14
+    userLabel.TextXAlignment = Enum.TextXAlignment.Left
+    userLabel.Parent = container
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(0.3,0,0,30)
+    statusLabel.Position = UDim2.new(0.7,0,0.5,-15)
+    statusLabel.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    statusLabel.Text = "Loading..."
+    statusLabel.TextColor3 = Color3.fromRGB(200,200,200)
+    statusLabel.Font = Enum.Font.GothamBold
+    statusLabel.TextSize = 14
+    statusLabel.Parent = container
+    Instance.new("UICorner", statusLabel).CornerRadius = UDim.new(0,10)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1,0,1,0)
+    btn.BackgroundTransparency = 1
+    btn.Text = ""
+    btn.Parent = container
+    local starBtn = Instance.new("TextButton")
+    starBtn.Size = UDim2.new(0,30,0,30)
+    starBtn.Position = UDim2.new(1,-40,0.5,-15)
+    starBtn.BackgroundTransparency = 1
+    starBtn.Text = "☆"
+    starBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    starBtn.Font = Enum.Font.FredokaOne
+    starBtn.TextSize = 20
+    starBtn.TextScaled = true
+    starBtn.Parent = container
+    starBtn.MouseEnter:Connect(function()
+        if favoritePlayer ~= playerName then
+            starBtn.Text = "★"
+        end
+    end)
+    starBtn.MouseLeave:Connect(function()
+        if favoritePlayer ~= playerName then
+            starBtn.Text = "☆"
+        end
+    end)
+    starBtn.MouseButton1Click:Connect(function()
+        if favoritePlayer == playerName then
+            favoritePlayer = nil
+            starBtn.Text = "☆"
+            removeFavoriteTimerDisplay()
+        else
+            favoritePlayer = playerName
+            starBtn.Text = "★"
+            createFavoriteTimerDisplay(playerName)
+        end
+    end)
+    local conn
+    local function updateStatus()
+        local tycoon = getTycoonOf(playerName)
+        if not tycoon then statusLabel.Text = "No Tycoon"; return end
+        local tycoonModel = tycoon:FindFirstChild("Tycoon")
+        local ff = tycoonModel and tycoonModel:FindFirstChild("ForcefieldFolder")
+        local screen = ff and ff:FindFirstChild("Screen")
+        local part = screen and screen:FindFirstChild("Screen")
+        local gui = part and part:FindFirstChild("SurfaceGui")
+        local timeLabel = gui and gui:FindFirstChild("Time")
+        if not timeLabel then statusLabel.Text = "No Timer"; return end
+        if conn then conn:Disconnect() end
+        conn = RunService.Heartbeat:Connect(function()
+            if not timeLabel.Parent then return end
+            local txt = timeLabel.Text
+            if txt == "0s" then
+                statusLabel.Text = "OPEN"
+                statusLabel.TextColor3 = Color3.fromRGB(0,255,100)
+                statusLabel.BackgroundColor3 = Color3.fromRGB(0,80,40)
+            elseif txt:match("%d+s") then
+                statusLabel.Text = txt
+                statusLabel.TextColor3 = Color3.fromRGB(255,255,255)
+                statusLabel.BackgroundColor3 = Color3.fromRGB(60,60,60)
+            else
+                statusLabel.Text = "CLOSED"
+                statusLabel.TextColor3 = Color3.fromRGB(255,80,80)
+                statusLabel.BackgroundColor3 = Color3.fromRGB(80,30,30)
+            end
+        end)
+    end
+    updateStatus()
+    plr.AncestryChanged:Connect(function()
+        if not plr.Parent then
+            statusLabel.Text = "Left The Game"
+            statusLabel.TextColor3 = Color3.fromRGB(255,220,0)
+            statusLabel.BackgroundColor3 = Color3.fromRGB(80,70,0)
+            if conn then conn:Disconnect() end
+            if favoritePlayer == playerName then
+                favoritePlayer = nil
+                removeFavoriteTimerDisplay()
+            end
+        end
+    end)
+    btn.MouseButton1Click:Connect(function()
+        if playerName == LocalPlayer.Name then return end
+        if openPlayerFrames[playerName] then openPlayerFrames[playerName]:Destroy() openPlayerFrames[playerName] = nil return end
+        local tycoon = getTycoonOf(playerName)
+        if not tycoon then return end
+        local temp = tycoon:FindFirstChild("Temporary")
+        local frame = cleanPanel(screenGui, UDim2.new(0,400,0,560), UDim2.new(0.5,220,0.2,0), Color3.fromRGB(18,18,18), 0)
+        frame.Active = true
+        frame.Draggable = true
+        local title = Instance.new("TextLabel")
+        title.Size = UDim2.new(1,-40,0,50)
+        title.Position = UDim2.new(0,20,0,10)
+        title.BackgroundTransparency = 1
+        title.Font = Enum.Font.GothamBold
+        title.Text = displayName.." (@"..playerName..")"
+        title.TextSize = 18
+        title.TextColor3 = Color3.fromRGB(255,255,255)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.Parent = frame
+        local close = Instance.new("TextButton")
+        close.Size = UDim2.new(0,36,0,36)
+        close.Position = UDim2.new(1,-50,0,12)
+        close.BackgroundColor3 = Color3.fromRGB(40,40,40)
+        close.Text = "x"
+        close.TextColor3 = Color3.fromRGB(200,200,200)
+        close.Font = Enum.Font.GothamBold
+        close.TextSize = 22
+        close.AutoButtonColor = false
+        close.Parent = frame
+        Instance.new("UICorner", close).CornerRadius = UDim.new(0,10)
+        close.MouseButton1Click:Connect(function()
+            frame:Destroy()
+            openPlayerFrames[playerName] = nil
+        end)
+        local modelsScroll = Instance.new("ScrollingFrame")
+        modelsScroll.Size = UDim2.new(1,-40,1,-70)
+        modelsScroll.Position = UDim2.new(0,20,0,70)
+        modelsScroll.BackgroundColor3 = Color3.fromRGB(22,22,22)
+        modelsScroll.ScrollBarThickness = 0
+        modelsScroll.CanvasSize = UDim2.new(0,0,0,0)
+        modelsScroll.Parent = frame
+        Instance.new("UICorner", modelsScroll).CornerRadius = UDim.new(0,12)
+        local mlay = Instance.new("UIListLayout")
+        mlay.Padding = UDim.new(0,6)
+        mlay.Parent = modelsScroll
+        mlay:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            modelsScroll.CanvasSize = UDim2.new(0,0,0,mlay.AbsoluteContentSize.Y + 20)
+        end)
+        if temp then
+            for _, model in ipairs(temp:GetChildren()) do
+                if model:IsA("Model") then
+                    createModelButton(modelsScroll, model, playerName, displayName)
+                end
+            end
+        end
+        openPlayerFrames[playerName] = frame
+    end)
+    playerButtons[playerName] = {container = container}
 end
 
 local function refreshPlayers()
-	for _, btn in pairs(playerButtons) do
-		if btn.container and btn.container.Parent then
-			btn.container:Destroy()
-		end
-	end
-	playerButtons = {}
-	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= LocalPlayer then
-			makePlayerButton(plr)
-		end
-	end
+    for _,v in pairs(playerButtons) do if v.container and v.container.Parent then v.container:Destroy() end end
+    playerButtons = {}
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then makePlayerButton(plr) end
+    end
 end
-refreshPlayers()
 
+refreshPlayers()
 Players.PlayerAdded:Connect(function(plr)
-	task.wait(2)
-	if plr ~= LocalPlayer then
-		makePlayerButton(plr)
-	end
+    task.wait(2)
+    if plr ~= LocalPlayer then makePlayerButton(plr) end
 end)
 Players.PlayerRemoving:Connect(refreshPlayers)
 
 local searchBox = Instance.new("TextBox")
-searchBox.Size = UDim2.new(1, 0, 0, 45)
-searchBox.Position = UDim2.new(0, 0, 1, -55)
-searchBox.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+searchBox.Size = UDim2.new(1,0,0,45)
+searchBox.Position = UDim2.new(0,0,1,-55)
+searchBox.BackgroundColor3 = Color3.fromRGB(28,28,28)
 searchBox.PlaceholderText = "Search global models... (e.g. 666)"
-searchBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
-searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+searchBox.PlaceholderColor3 = Color3.fromRGB(140,140,140)
+searchBox.TextColor3 = Color3.fromRGB(255,255,255)
 searchBox.Font = Enum.Font.Gotham
 searchBox.TextSize = 16
 searchBox.TextXAlignment = Enum.TextXAlignment.Left
 searchBox.Parent = homeContent
-Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0,12)
 
 local function createGlobalSearchUI()
-	if globalSearchFrame then globalSearchFrame:Destroy() end
-
-	globalSearchFrame = cleanPanel(screenGui, UDim2.new(0, 420, 0, 560), UDim2.new(0.5, 230, 0.2, 0), Color3.fromRGB(18, 18, 18), 0)
-	globalSearchFrame.Active = true
-	globalSearchFrame.Draggable = true
-
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -40, 0, 50)
-	title.Position = UDim2.new(0, 20, 0, 10)
-	title.BackgroundTransparency = 1
-	title.Font = Enum.Font.GothamBold
-	title.Text = "Global Search Results"
-	title.TextSize = 19
-	title.TextColor3 = Color3.fromRGB(255, 255, 255)
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Parent = globalSearchFrame
-
-	resultCountLabel = Instance.new("TextLabel")
-	resultCountLabel.Size = UDim2.new(1, -40, 0, 30)
-	resultCountLabel.Position = UDim2.new(0, 20, 0, 55)
-	resultCountLabel.BackgroundTransparency = 1
-	resultCountLabel.Font = Enum.Font.Gotham
-	resultCountLabel.Text = "Type to search..."
-	resultCountLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-	resultCountLabel.TextSize = 14
-	resultCountLabel.TextXAlignment = Enum.TextXAlignment.Left
-	resultCountLabel.Parent = globalSearchFrame
-
-	local closeBtn = Instance.new("TextButton")
-	closeBtn.Size = UDim2.new(0, 36, 0, 36)
-	closeBtn.Position = UDim2.new(1, -50, 0, 12)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	closeBtn.Text = "x"
-	closeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-	closeBtn.Font = Enum.Font.GothamBold
-	closeBtn.TextSize = 22
-	closeBtn.AutoButtonColor = false
-	closeBtn.Parent = globalSearchFrame
-	Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
-	closeBtn.MouseButton1Click:Connect(function()
-		if globalSearchFrame then globalSearchFrame:Destroy() end
-		globalSearchFrame = nil
-	end)
-
-	scrollResults = Instance.new("ScrollingFrame")
-	scrollResults.Size = UDim2.new(1, -40, 1, -100)
-	scrollResults.Position = UDim2.new(0, 20, 0, 90)
-	scrollResults.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-	scrollResults.ScrollBarThickness = 0
-	scrollResults.CanvasSize = UDim2.new(0, 0, 0, 0)
-	scrollResults.Parent = globalSearchFrame
-	Instance.new("UICorner", scrollResults).CornerRadius = UDim.new(0, 12)
-
-	resultLayout = Instance.new("UIListLayout")
-	resultLayout.Padding = UDim.new(0, 8)
-	resultLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	resultLayout.Parent = scrollResults
-	resultLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		scrollResults.CanvasSize = UDim2.new(0, 0, 0, resultLayout.AbsoluteContentSize.Y + 20)
-	end)
+    if globalSearchFrame then globalSearchFrame:Destroy() end
+    globalSearchFrame = cleanPanel(screenGui, UDim2.new(0,420,0,560), UDim2.new(0.5,230,0.2,0), Color3.fromRGB(18,18,18), 0)
+    globalSearchFrame.Active = true
+    globalSearchFrame.Draggable = true
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1,-40,0,50)
+    title.Position = UDim2.new(0,20,0,10)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.GothamBold
+    title.Text = "Global Search Results"
+    title.TextSize = 19
+    title.TextColor3 = Color3.fromRGB(255,255,255)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = globalSearchFrame
+    resultCountLabel = Instance.new("TextLabel")
+    resultCountLabel.Size = UDim2.new(1,-40,0,30)
+    resultCountLabel.Position = UDim2.new(0,20,0,55)
+    resultCountLabel.BackgroundTransparency = 1
+    resultCountLabel.Font = Enum.Font.Gotham
+    resultCountLabel.Text = "Type to search..."
+    resultCountLabel.TextColor3 = Color3.fromRGB(180,180,180)
+    resultCountLabel.TextSize = 14
+    resultCountLabel.TextXAlignment = Enum.TextXAlignment.Left
+    resultCountLabel.Parent = globalSearchFrame
+    local close = Instance.new("TextButton")
+    close.Size = UDim2.new(0,36,0,36)
+    close.Position = UDim2.new(1,-50,0,12)
+    close.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    close.Text = "x"
+    close.TextColor3 = Color3.fromRGB(200,200,200)
+    close.Font = Enum.Font.GothamBold
+    close.TextSize = 22
+    close.AutoButtonColor = false
+    close.Parent = globalSearchFrame
+    Instance.new("UICorner", close).CornerRadius = UDim.new(0,10)
+    close.MouseButton1Click:Connect(function()
+        if globalSearchFrame then globalSearchFrame:Destroy() end
+        globalSearchFrame = nil
+    end)
+    scrollResults = Instance.new("ScrollingFrame")
+    scrollResults.Size = UDim2.new(1,-40,1,-100)
+    scrollResults.Position = UDim2.new(0,20,0,90)
+    scrollResults.BackgroundColor3 = Color3.fromRGB(22,22,22)
+    scrollResults.ScrollBarThickness = 0
+    scrollResults.CanvasSize = UDim2.new(0,0,0,0)
+    scrollResults.Parent = globalSearchFrame
+    Instance.new("UICorner", scrollResults).CornerRadius = UDim.new(0,12)
+    resultLayout = Instance.new("UIListLayout")
+    resultLayout.Padding = UDim.new(0,8)
+    resultLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    resultLayout.Parent = scrollResults
+    resultLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scrollResults.CanvasSize = UDim2.new(0,0,0,resultLayout.AbsoluteContentSize.Y + 20)
+    end)
 end
 
 local function updateGlobalSearch()
-	local text = searchBox.Text:lower()
-	if text == "" or #text < 1 then
-		if globalSearchFrame then globalSearchFrame:Destroy() end
-		globalSearchFrame = nil
-		return
-	end
-
-	if not globalSearchFrame then
-		createGlobalSearchUI()
-	end
-
-	for _, child in ipairs(scrollResults:GetChildren()) do
-		if child:IsA("GuiObject") then
-			child:Destroy()
-		end
-	end
-
-	resultLayout.Parent = nil
-	task.wait()
-	resultLayout.Parent = scrollResults
-
-	local results = 0
-	for _, tycoon in ipairs(tycoons:GetChildren()) do
-		local ownerName = tycoon:GetAttribute("Owner")
-		if not ownerName or ownerName == LocalPlayer.Name then continue end
-		local plr = Players:FindFirstChild(ownerName)
-		local displayName = plr and plr.DisplayName or ownerName
-		local tempFolder = tycoon:FindFirstChild("Temporary")
-		if not tempFolder then continue end
-
-		for _, model in ipairs(tempFolder:GetChildren()) do
-			if not model:IsA("Model") then continue end
-
-			local searchText = model.Name:lower()
-			local trashInfo = model:FindFirstChild("TrashInfo")
-			if trashInfo then
-				for _, obj in ipairs(trashInfo:GetChildren()) do
-					if obj:IsA("TextLabel") and obj.Visible then
-						searchText = searchText .. " " .. obj.Text:lower()
-					end
-				end
-			end
-
-			if searchText:find(text) then
-				results = results + 1
-				createModelButton(scrollResults, model, ownerName, displayName)
-			end
-		end
-	end
-
-	if results == 0 then
-		resultCountLabel.Text = "No Results Found"
-		resultCountLabel.TextColor3 = Color3.fromRGB(255, 150, 150)
-	else
-		resultCountLabel.Text = results .. " Result" .. (results > 1 and "s" or "") .. " Found"
-		resultCountLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-	end
+    local text = searchBox.Text:lower()
+    if text == "" or #text < 1 then
+        if globalSearchFrame then globalSearchFrame:Destroy() end
+        globalSearchFrame = nil
+        return
+    end
+    if not globalSearchFrame then createGlobalSearchUI() end
+    for _,c in ipairs(scrollResults:GetChildren()) do if c:IsA("GuiObject") then c:Destroy() end end
+    resultLayout.Parent = nil task.wait() resultLayout.Parent = scrollResults
+    local results = 0
+    for _, tycoon in ipairs(tycoons:GetChildren()) do
+        local owner = tycoon:GetAttribute("Owner")
+        if not owner or owner == LocalPlayer.Name then continue end
+        local plr = Players:FindFirstChild(owner)
+        local disp = plr and plr.DisplayName or owner
+        local temp = tycoon:FindFirstChild("Temporary")
+        if not temp then continue end
+        for _, model in ipairs(temp:GetChildren()) do
+            if not model:IsA("Model") then continue end
+            local s = model.Name:lower()
+            local info = model:FindFirstChild("TrashInfo")
+            if info then
+                for _, obj in ipairs(info:GetChildren()) do
+                    if obj:IsA("TextLabel") and obj.Visible then
+                        s = s .. " " .. obj.Text:lower()
+                    end
+                end
+            end
+            if s:find(text) then
+                results += 1
+                createModelButton(scrollResults, model, owner, disp)
+            end
+        end
+    end
+    if results == 0 then
+        resultCountLabel.Text = "No Results Found"
+        resultCountLabel.TextColor3 = Color3.fromRGB(255,150,150)
+    else
+        resultCountLabel.Text = results.." Result"..(results>1 and "s" or "").." Found"
+        resultCountLabel.TextColor3 = Color3.fromRGB(100,255,100)
+    end
 end
 
 searchBox:GetPropertyChangedSignal("Text"):Connect(updateGlobalSearch)
+
+RunService.Heartbeat:Connect(function()
+    if timerDisplayEnabled then updateTimerDisplay() end
+    if favoritePlayer and favoriteTimerTextLabel then updateFavoriteTimerDisplay() end
+    if espEnabled then task.spawn(updateBestModels) end
+end)
